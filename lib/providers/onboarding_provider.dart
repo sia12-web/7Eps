@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sevent_eps/models/onboarding_data.dart';
+import 'package:sevent_eps/providers/auth_provider.dart';
 
 /// State notifier for managing onboarding progress
 class OnboardingState extends StateNotifier<AsyncValue<OnboardingData>> {
@@ -179,5 +180,22 @@ class OnboardingState extends StateNotifier<AsyncValue<OnboardingData>> {
 /// Provider for onboarding state
 final onboardingProvider =
     StateNotifierProvider<OnboardingState, AsyncValue<OnboardingData>>((ref) {
-  return OnboardingState();
+  final state = OnboardingState();
+
+  // Watch auth state and reload onboarding data when user logs in
+  ref.listen<bool>(authProvider, (previous, next) {
+    if (previous == null) return; // First time, no previous state
+
+    if (!previous && next) {
+      // User just logged in, reload onboarding data
+      debugPrint('🔄 User logged in, reloading onboarding data...');
+      state.refresh();
+    } else if (previous && !next) {
+      // User logged out, reset to initial state
+      debugPrint('🔄 User logged out, resetting onboarding...');
+      state.refresh();
+    }
+  });
+
+  return state;
 });

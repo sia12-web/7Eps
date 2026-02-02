@@ -26,14 +26,19 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/auth',
     redirect: (context, state) {
+      debugPrint('🔄 Router redirect: authState=$authState, location=${state.matchedLocation}');
+
       // If not authenticated, redirect to auth
       if (!authState) {
         final isOnAuthRoute = state.matchedLocation == '/auth' ||
             state.matchedLocation == '/login' ||
             state.matchedLocation == '/register';
         if (!isOnAuthRoute) {
+          debugPrint('🔒 Not authenticated, redirecting to /auth');
           return '/auth';
         }
+        debugPrint('✓ Not authenticated, on auth route, staying');
+        return null;
       }
 
       // If authenticated and on auth route, check onboarding status
@@ -42,19 +47,25 @@ final routerProvider = Provider<GoRouter>((ref) {
             state.matchedLocation == '/login' ||
             state.matchedLocation == '/register';
         if (isOnAuthRoute) {
+          debugPrint('🔓 Authenticated on auth route, onboardingAsync.isLoading=${onboardingAsync.isLoading}');
+
           // Wait for onboarding data to load
           if (onboardingAsync.isLoading) {
+            debugPrint('⏳ Onboarding loading, waiting...');
             return null; // Stay on current route while loading
           }
 
           final onboardingData = onboardingAsync.value;
+          debugPrint('📊 Onboarding data: step=${onboardingData?.currentStep}, isComplete=${onboardingData?.isComplete}');
 
           if (onboardingData != null && onboardingData.isComplete) {
             // Onboarding complete, go to daily edition
+            debugPrint('✅ Onboarding complete, redirecting to /daily-edition');
             return '/daily-edition';
           } else {
             // Onboarding not complete, go to onboarding (step 1 or saved step)
             final savedStep = onboardingData?.currentStep ?? 1;
+            debugPrint('📝 Onboarding incomplete (step $savedStep), redirecting to /onboarding/$savedStep');
             return '/onboarding/$savedStep';
           }
         }

@@ -45,6 +45,7 @@ class _BasicsStepState extends ConsumerState<BasicsStep> {
 
   bool get _isValid {
     return _nameController.text.trim().length >= 2 &&
+        _selectedPronouns != null &&
         _cityController.text.trim().length >= 2;
   }
 
@@ -64,10 +65,10 @@ class _BasicsStepState extends ConsumerState<BasicsStep> {
       // Collect form data
       final data = <String, dynamic>{
         'name': _nameController.text.trim(),
+        'pronouns': _selectedPronouns!,
         'city': _cityController.text.trim(),
         if (_universityController.text.trim().isNotEmpty)
           'university': _universityController.text.trim(),
-        if (_selectedPronouns != null) 'pronouns': _selectedPronouns,
       };
 
       // Save step
@@ -155,8 +156,8 @@ class _BasicsStepState extends ConsumerState<BasicsStep> {
 
                       const SizedBox(height: 24),
 
-                      // Pronouns (Optional)
-                      _buildSectionTitle('Pronouns (optional)'),
+                      // Pronouns (Required)
+                      _buildSectionTitle('Pronouns *'),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
                         value: _selectedPronouns,
@@ -164,6 +165,12 @@ class _BasicsStepState extends ConsumerState<BasicsStep> {
                           'Select your pronouns',
                           Icons.badge,
                         ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please select your pronouns';
+                          }
+                          return null;
+                        },
                         items: _pronounOptions.map((pronouns) {
                           return DropdownMenuItem<String>(
                             value: pronouns,

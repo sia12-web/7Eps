@@ -21,6 +21,7 @@ import 'package:sevent_eps/providers/onboarding_provider.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
+  final onboardingAsync = ref.watch(onboardingProvider);
 
   return GoRouter(
     initialLocation: '/auth',
@@ -41,9 +42,21 @@ final routerProvider = Provider<GoRouter>((ref) {
             state.matchedLocation == '/login' ||
             state.matchedLocation == '/register';
         if (isOnAuthRoute) {
-          // Check onboarding status (async, so we won't block)
-          // The onboarding screen will handle redirect based on completion
-          return '/onboarding/1';
+          // Wait for onboarding data to load
+          if (onboardingAsync.isLoading) {
+            return null; // Stay on current route while loading
+          }
+
+          final onboardingData = onboardingAsync.value;
+
+          if (onboardingData != null && onboardingData.isComplete) {
+            // Onboarding complete, go to daily edition
+            return '/daily-edition';
+          } else {
+            // Onboarding not complete, go to onboarding (step 1 or saved step)
+            final savedStep = onboardingData?.currentStep ?? 1;
+            return '/onboarding/$savedStep';
+          }
         }
 
         // Check if user is trying to access protected routes without completing onboarding

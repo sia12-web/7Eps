@@ -1,0 +1,54 @@
+name: sevent_eps
+description: 7Eps - Progressive Disclosure Dating App
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI & Navigation
+  go_router: ^14.6.2
+  flutter_svg: ^2.0.16
+
+  # State Management
+  flutter_riverpod: ^2.6.1
+
+  # Supabase
+  supabase_flutter: ^2.8.4
+
+  # Data Models
+  json_serializable: ^6.9.2
+
+  # Utilities
+  intl: ^0.20.1
+  uuid: ^4.5.1
+
+  # Image Handling
+  image_picker: ^1.1.2
+  cached_network_image: ^3.4.1
+
+  # Audio Recording
+  record: ^5.1.2
+  audioplayers: ^6.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Code Generation
+  build_runner: ^2.4.13
+  json_serializable: ^6.9.2
+
+  # Linting
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/icons/

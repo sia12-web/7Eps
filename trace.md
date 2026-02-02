@@ -31,12 +31,27 @@ A dating app with progressive disclosure through 7 episodes:
 
 ### Tables Applied (via migrations)
 
-1. **profiles** - User profiles
+1. **profiles** - User profiles with onboarding tracking
 2. **profile_photos** - User photos (max 3)
 3. **matches** - Match/journey records
 4. **match_participants** - Many-to-many relationship
 5. **artifacts** - Episode submissions
 6. **daily_editions** - Daily candidate matches
+
+### Onboarding Fields (Migration 009)
+
+**Added to profiles table:**
+- `onboarding_step` (INT) - Tracks progress (1-11)
+- `dob` (DATE) - Date of birth for age verification
+- `pronouns` (TEXT) - User's preferred pronouns
+- `headline` (TEXT) - Profile tagline (max 100 chars)
+- `gender_interest` (TEXT) - Dating preference (men/women/everyone)
+- `age_min` (INT) - Minimum age preference (18-100)
+- `age_max` (INT) - Maximum age preference (18-100)
+- `distance_radius` (INT) - Distance preference (10-200km)
+- `terms_accepted_at` (TIMESTAMPTZ) - Terms acceptance timestamp
+- `safety_agreement_accepted_at` (TIMESTAMPTZ) - Safety agreement timestamp
+- `onboarding_completed_at` (TIMESTAMPTZ) - Onboarding completion timestamp
 
 ### Important Database Decisions
 
@@ -85,25 +100,38 @@ lib/
 │   │   └── supabase_client.dart # Supabase init with credentials
 │   └── theme/app_theme.dart     # Colors, typography
 ├── models/
-│   ├── profile.dart             # Profile data model
+│   ├── profile.dart             # Profile data model with onboarding fields
 │   ├── profile_photo.dart       # Photo model
 │   ├── match.dart               # Match/journey model
 │   ├── artifact.dart            # Episode submission model
 │   ├── episode.dart             # Episode definitions
-│   └── interests.dart           # 60+ predefined interests
+│   ├── interests.dart           # 60+ predefined interests
+│   └── onboarding_data.dart     # Onboarding progress tracking model
 ├── providers/
 │   ├── auth_provider.dart       # Authentication state + error handling
-│   └── profile_provider.dart    # Profile CRUD operations
+│   ├── profile_provider.dart    # Profile CRUD operations + photo upload
+│   └── onboarding_provider.dart # Onboarding state management
 ├── features/
 │   ├── auth/
 │   │   ├── auth_screen.dart     # Landing page (Sign In / Register)
 │   │   ├── login_screen.dart    # Login form with helpful error hints
 │   │   └── register_screen.dart # Registration form
+│   ├── onboarding/
+│   │   ├── onboarding_flow_screen.dart  # Multi-step flow container
+│   │   └── steps/
+│   │       ├── welcome_slides_step.dart     # Steps 1-3: Intro slides
+│   │       ├── age_gate_step.dart          # Step 4: Age verification (18+)
+│   │       ├── basics_step.dart            # Step 5: Name, city, pronouns
+│   │       ├── interests_step.dart         # Step 6: Interest selection (5-12)
+│   │       ├── photos_step.dart            # Step 7: Photo upload (1-3) with blur preview
+│   │       ├── preferences_step.dart       # Step 8: Gender, age, distance
+│   │       ├── safety_step.dart            # Step 9: Safety agreement
+│   │       ├── tutorial_step.dart          # Step 10: Episode system tutorial
+│   │       └── generate_daily_edition_step.dart # Step 11: Generate matches
 │   ├── profile/
-│   │   ├── onboarding_screen.dart     # Wraps EditProfileScreen
-│   │   ├── edit_profile_screen.dart   # Profile creation/editing
-│   │   ├── photo_upload_widget.dart   # Photo upload UI
-│   │   └── interests_selector.dart    # Interest selection
+│   │   ├── edit_profile_screen.dart   # Profile creation/editing (deprecated)
+│   │   ├── photo_upload_widget.dart   # Photo upload UI (extracted)
+│   │   └── interests_selector.dart    # Interest selection (extracted)
 │   └── home/
 │       └── home_screen.dart     # Placeholder home (Phase 3 coming)
 └── utils/
@@ -132,38 +160,132 @@ lib/
 - `lib/features/auth/register_screen.dart` - Registration + `_buildHelpfulHint()`
 - `lib/core/supabase/supabase_client.dart` - Supabase initialization
 
-### ✅ Phase 2: Profile + Onboarding (COMPLETE)
+### ✅ Phase 2: Multi-Step Onboarding Flow (COMPLETE)
 
-**Profile Features:**
-- Multi-step profile creation form
-- Photo upload (up to 3 photos)
-- Interest selection (max 10 interests, 60+ options across 6 categories)
-- Profile completion percentage tracker
-- Onboarding flow that checks if profile is complete
-- Redirects to home if profile already complete
+**11-Step Guided Onboarding:**
+1. **Welcome Slides (Steps 1-3):** Introduction to 7Eps concept
+   - "3-5 Quality Matches Daily"
+   - "7 Episodes → Real Date"
+   - "3 Active Journeys Max"
+
+2. **Age Gate (Step 4):** Mandatory age verification
+   - DOB picker (Month, Day, Year dropdowns)
+   - Hard block if under 18 (sign-out + redirect to auth)
+   - Checkbox confirmation: "I confirm I am 18+"
+
+3. **Basics (Step 5):** Core profile information
+   - First name (required, 2-50 chars)
+   - Pronouns (dropdown: He/Him, She/Her, They/Them, Custom)
+   - City (required, 2-100 chars)
+   - University/Campus (optional)
+   - Headline removed (user feedback)
+
+4. **Interests (Step 6):** Interest selection
+   - Select 5-12 interests from curated list
+   - Counter display: "X/12 selected"
+   - Extracted from existing `interests_selector.dart`
+
+5. **Photos (Step 7):** Photo upload with blur preview
+   - Min 1 photo, max 3 photos
+   - **Flutter Web compatible** (uses `Image.network()` for web, `Image.file()` for mobile)
+   - **Blur preview** showing Episode 1 appearance (sigma=10 blur)
+   - Grid layout showing all uploaded photos with number badges
+   - Clear explanation: "Your photos will be blurred at Episode 1 and gradually become clearer"
+
+6. **Preferences (Step 8):** Dating preferences
+   - Gender interest: Men | Women | Everyone (segmented control)
+   - Age range: **Text input fields** for precise control (18-100)
+     - Default max age = user's age + 10 (calculated from DOB)
+     - Auto-adjustment: if min > max, max updates to match min
+     - Validation: must be between 18-100
+   - Distance radius: **Continuous slider** (1km precision) + **text input field** (10-200km)
+     - Slider and text field stay synchronized
+     - User can type exact value or use slider for visual feedback
+
+7. **Safety Agreement (Step 9):** Community guidelines
+   - Code of conduct (4 sections: Be Respectful, Be Authentic, Stay Safe, Report Issues)
+   - Checkbox: "I have read and agree to the Community Guidelines"
+   - Stores timestamp in `safety_agreement_accepted_at`
+
+8. **Tutorial (Step 10):** Episode system explanation
+   - Visual timeline showing 7 episode cards
+   - Artifact examples with icons
+   - "Both must complete episode to unlock next" explanation
+
+9. **Generate Daily Edition (Step 11):** Match generation
+   - Loading animation: "Finding your first matches..."
+   - Calls daily edition generation function
+   - Sets `onboarding_completed_at = NOW()`
+   - Auto-redirects to `/daily-edition` after completion
+
+**Progress Tracking:**
+- `onboarding_step` field stores current step (1-11)
+- Resumable progress (can quit and return later)
+- Auto-save on each step completion
+- Progress indicator bar on every screen (except welcome slides)
+
+**Navigation Architecture:**
+- URL-based routing: `/onboarding/:step`
+- `_currentStep` changed from state variable to getter (fixes navigation loop bug)
+- **Welcome slides navigation fix:** Step 1 only shows WelcomeSlidesStep, navigates directly to step 4 when complete
+- Steps 2 and 3 auto-advance to step 4 if accessed directly (prevents rebuild loops)
+- Back button (disabled on step 1)
+- Forward button validation-dependent
 
 **Data Models:**
-- `Profile` model with `isComplete` and `completionPercentage` getters
-- `ProfilePhoto` model for photo management
-- `Interests` data with 60+ interests categorized
+- `OnboardingData` model with `currentStep` and `formData` map
+- `Profile` model extended with 11 onboarding fields
+- Auto-save to database on each step
 
 **Router Logic:**
-- Authenticated users → `/onboarding`
-- `/onboarding` checks if profile is complete
-  - If complete → redirect to `/` (home)
-  - If not complete → show profile creation form
-- After saving profile → redirect to `/` (home)
+- Authenticated users → `/onboarding/1` (or saved step)
+- Onboarding step loaded from `onboarding_step` field
+- Protected routes (`/daily-edition`, `/journeys`) blocked until step 11 complete
+
+**Validation Rules Summary:**
+| Step | Required | Validation |
+|------|----------|------------|
+| 1-3 (Welcome) | None | Always valid |
+| 4 (Age Gate) | DOB + checkbox | Age >= 18 AND checkbox checked |
+| 5 (Basics) | Name + City | Name >= 2 chars, City >= 2 chars |
+| 6 (Interests) | Interests | 5-12 interests selected |
+| 7 (Photos) | Photos | At least 1 photo |
+| 8 (Preferences) | None | Has default (everyone) |
+| 9 (Safety) | Checkbox | Must be checked |
+| 10 (Tutorial) | None | Always valid |
+| 11 (Generate) | None | Backend validates |
 
 **Files Created:**
-- `lib/models/profile.dart` - Profile model with completion tracking
-- `lib/models/profile_photo.dart` - Photo model
-- `lib/models/interests.dart` - 60+ interests data
-- `lib/providers/profile_provider.dart` - Profile CRUD + photo upload
-- `lib/features/profile/onboarding_screen.dart` - Onboarding wrapper
-- `lib/features/profile/edit_profile_screen.dart` - Profile form
-- `lib/features/profile/photo_upload_widget.dart` - Photo upload UI
-- `lib/features/profile/interests_selector.dart` - Interest selection
-- `lib/features/home/home_screen.dart` - Placeholder home screen
+- `supabase/migrations/009_onboarding_fields.sql` - Database schema for onboarding
+- `lib/models/onboarding_data.dart` - Onboarding progress model
+- `lib/providers/onboarding_provider.dart` - Onboarding state management
+- `lib/features/onboarding/onboarding_flow_screen.dart` - Flow container
+- `lib/features/onboarding/steps/welcome_slides_step.dart` - Steps 1-3
+- `lib/features/onboarding/steps/age_gate_step.dart` - Step 4
+- `lib/features/onboarding/steps/basics_step.dart` - Step 5
+- `lib/features/onboarding/steps/interests_step.dart` - Step 6
+- `lib/features/onboarding/steps/photos_step.dart` - Step 7 (with web compatibility)
+- `lib/features/onboarding/steps/preferences_step.dart` - Step 8
+- `lib/features/onboarding/steps/safety_step.dart` - Step 9
+- `lib/features/onboarding/steps/tutorial_step.dart` - Step 10
+- `lib/features/onboarding/steps/generate_daily_edition_step.dart` - Step 11
+
+**Bug Fixes:**
+- ✅ Fixed 3-click navigation bug on welcome slides
+  - Changed to show WelcomeSlidesStep only on step 1
+  - Navigates directly to step 4 when complete, skipping steps 2-3
+  - Steps 2 and 3 auto-advance to step 4 if accessed directly
+- ✅ Fixed Flutter Web photo upload crash
+  - Added `kIsWeb` check to use `Image.network()` instead of `Image.file()`
+- ✅ Removed redundant Auth step (users already authenticated)
+- ✅ Removed skip button from welcome slides (onboarding should not be skippable)
+- ✅ Removed headline field from Basics step (user feedback)
+- ✅ Added clear explanation about photo blur progression
+- ✅ Changed to grid layout showing all uploaded photos instead of just first one
+- ✅ Improved age and distance controls with precise input
+  - Replaced dropdown with text input fields for exact age values
+  - Added continuous slider (1km precision) + text input for distance
+  - Calculate default max age as user's age + 10 based on DOB
 
 ## Database Migrations Applied
 
@@ -171,6 +293,7 @@ lib/
 2. **002_rls_policies.sql** - Row Level Security policies
 3. **003_functions_triggers.sql** - Postgres functions and triggers
 4. **004_match_functions.sql** - Additional match-related functions
+5. **009_onboarding_fields.sql** - Onboarding tracking fields (11 new columns)
 
 **Command to apply:** `supabase db push`
 
@@ -191,19 +314,23 @@ lib/
 ## Current Router Routes
 
 ```dart
-/auth          - Auth landing screen
-/login         - Login screen
-/register      - Registration screen
-/onboarding    - Profile onboarding (redirects if complete)
-/              - Home screen (placeholder)
-/profile/edit  - Edit profile (not currently used)
+/auth                - Auth landing screen
+/login               - Login screen
+/register            - Registration screen
+/onboarding          - Redirects to /onboarding/1 (or saved step)
+/onboarding/:step    - Multi-step onboarding flow (steps 1-11)
+/daily-edition       - Daily matches (protected, requires onboarding complete)
+/journeys            - Active journeys (protected, requires onboarding complete)
+/                    - Home screen (placeholder)
+/profile/edit        - Edit profile (not currently used)
 ```
 
 ## Known Issues & Workarounds
 
-1. **Image Picker on Web:** May have limitations compared to mobile
+1. **Image Picker on Web:** ✅ Fixed - Now uses `Image.network()` for web, `Image.file()` for mobile
 2. **Hot Reload:** Some changes require full restart (especially pubspec.yaml changes)
 3. **Flutter Web:** Some packages don't support web platform
+4. **Navigation State Desync:** ✅ Fixed - Changed to URL-based state management
 
 ## Development Commands
 
@@ -309,21 +436,43 @@ String _getErrorMessage(dynamic error) {
 1. **App Name:** User corrected that app is called "7Eps" not "Love Journey" - Updated all branding
 2. **Onboarding Issue:** User reported login went straight to main page instead of onboarding - Fixed with profile completion check
 3. **Error Messages:** User requested better error prompts - Implemented user-friendly error messages with helpful hints
+4. **Redundant Auth Step:** User pointed out auth appears at beginning AND after onboarding, which is confusing - Removed auth step from onboarding flow (users already authenticated)
+5. **Skip Button Confusion:** User questioned why onboarding has a skip button - Removed skip button (onboarding should not be skippable)
+6. **Photo Upload Confusion:** User unclear if photos are for Episode 1 or all episodes, and couldn't see all 3 photos - Added clear explanation and changed to grid layout showing all photos with blur preview
+7. **Double-Click Bug:** User reported "Get Started" button required two clicks to work - Fixed by changing `_currentStep` from state variable to getter reading URL parameter
+8. **3-Click Navigation Bug:** User reported having to click "Get Started" 3 times to advance from welcome slides - Fixed by making step 1 navigate directly to step 4, skipping intermediate steps 2-3 to prevent rebuild loops
+9. **Max Age Range:** User reported max age of 100 seemed weird - Changed default max age to user's age + 10 (calculated from DOB), capped at 100
+10. **Precise Control Request:** User wanted better control over age and distance selection - Replaced dropdown with text input fields for exact age values (18-100), added continuous slider (1km precision) + text input for distance (10-200km)
 
 ## Testing Status
 
 - ✅ Registration tested successfully
 - ✅ Login tested successfully
-- ✅ Profile creation flow tested
-- ❌ Daily Edition not yet implemented
+- ✅ 11-step onboarding flow tested
+- ✅ Age gate (18+ verification) tested
+- ✅ Photo upload with blur preview tested (Flutter Web compatible)
+- ✅ Navigation between onboarding steps tested
+- ✅ Progress tracking and resumable onboarding tested
+- ✅ Welcome slides navigation tested (single-click advance to step 4)
+- ✅ Precise age and distance controls tested
+- ✅ Headline field removal tested
+- ❌ Daily Edition generation implemented but returns 0 candidates (no other users)
 - ❌ Episode system not yet implemented
 
 ## Git Status
 
-**Current:** Not a git repository (no `.git` folder)
+**Repository:** Active git repository
+**Total Commits:** 3
+- `8384b07` - Implement comprehensive 12-step onboarding flow for 7Eps dating app
+- `4235033` - Fix onboarding navigation and UX issues
+- `c326510` - Fix onboarding UX issues and improve controls
+  - Fix welcome slides navigation loop (3-click bug)
+  - Remove headline field from Basics step
+  - Improve age and distance controls with precise input
+  - Add validation for age (18-100) and distance (10-200km) ranges
 
 ---
 
-**Last Updated:** 2026-01-31
-**Current Phase:** Phase 2 (Profile + Onboarding) - COMPLETE
-**Next Phase:** Phase 3 (Daily Edition)
+**Last Updated:** 2026-02-02
+**Current Phase:** Phase 2 (Multi-Step Onboarding Flow) - COMPLETE
+**Next Phase:** Phase 3 (Daily Edition Generation)

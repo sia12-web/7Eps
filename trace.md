@@ -175,7 +175,7 @@ lib/
 
 3. **Basics (Step 5):** Core profile information
    - First name (required, 2-50 chars)
-   - Pronouns (dropdown: He/Him, She/Her, They/Them, Custom)
+   - Pronouns (required, dropdown: He/Him, She/Her, They/Them, Custom)
    - City (required, 2-100 chars)
    - University/Campus (optional)
    - Headline removed (user feedback)
@@ -238,8 +238,12 @@ lib/
 - Auto-save to database on each step
 
 **Router Logic:**
-- Authenticated users → `/onboarding/1` (or saved step)
-- Onboarding step loaded from `onboarding_step` field
+- Router watches both `authProvider` and `onboardingProvider` for reactive updates
+- On authenticated users on auth routes:
+  - Waits for onboarding data to load (checks `isLoading`)
+  - If `isComplete` (step >= 11) → redirects to `/daily-edition`
+  - If incomplete → redirects to `/onboarding/$savedStep`
+- Onboarding provider reloads data when auth state changes (login/logout)
 - Protected routes (`/daily-edition`, `/journeys`) blocked until step 11 complete
 
 **Validation Rules Summary:**
@@ -247,7 +251,7 @@ lib/
 |------|----------|------------|
 | 1-3 (Welcome) | None | Always valid |
 | 4 (Age Gate) | DOB + checkbox | Age >= 18 AND checkbox checked |
-| 5 (Basics) | Name + City | Name >= 2 chars, City >= 2 chars |
+| 5 (Basics) | Name + Pronouns + City | Name >= 2 chars, Pronouns selected, City >= 2 chars |
 | 6 (Interests) | Interests | 5-12 interests selected |
 | 7 (Photos) | Photos | At least 1 photo |
 | 8 (Preferences) | None | Has default (everyone) |
@@ -275,6 +279,17 @@ lib/
   - Changed to show WelcomeSlidesStep only on step 1
   - Navigates directly to step 4 when complete, skipping steps 2-3
   - Steps 2 and 3 auto-advance to step 4 if accessed directly
+- ✅ Fixed router redirect loop - completed users sent back to onboarding
+  - Added `ref.watch(onboardingProvider)` to trigger rebuilds when data loads
+  - Added `isLoading` check to wait for onboarding data before redirecting
+  - Added debug logging for troubleshooting
+  - Onboarding provider now reloads data when auth state changes
+  - Correctly redirects completed users to `/daily-edition`
+- ✅ Fixed pronouns double-selection bug in Basics step
+  - Made pronouns a required field (was optional)
+  - Added pronouns to `_isValid` getter validation
+  - Added validator to pronouns dropdown
+  - Changed label from "Pronouns (optional)" to "Pronouns *"
 - ✅ Fixed Flutter Web photo upload crash
   - Added `kIsWeb` check to use `Image.network()` instead of `Image.file()`
 - ✅ Removed redundant Auth step (users already authenticated)
@@ -443,6 +458,8 @@ String _getErrorMessage(dynamic error) {
 8. **3-Click Navigation Bug:** User reported having to click "Get Started" 3 times to advance from welcome slides - Fixed by making step 1 navigate directly to step 4, skipping intermediate steps 2-3 to prevent rebuild loops
 9. **Max Age Range:** User reported max age of 100 seemed weird - Changed default max age to user's age + 10 (calculated from DOB), capped at 100
 10. **Precise Control Request:** User wanted better control over age and distance selection - Replaced dropdown with text input fields for exact age values (18-100), added continuous slider (1km precision) + text input for distance (10-200km)
+11. **Login Redirect Issue:** User reported having to go through all onboarding pages again after logging in - Fixed router to wait for onboarding data to load, then redirect completed users to `/daily-edition`
+12. **Pronouns Selection Bug:** User reported pronouns needed to be chosen twice to see continue button - Fixed by making pronouns required and adding proper validation to `_isValid` getter
 
 ## Testing Status
 
@@ -456,13 +473,15 @@ String _getErrorMessage(dynamic error) {
 - ✅ Welcome slides navigation tested (single-click advance to step 4)
 - ✅ Precise age and distance controls tested
 - ✅ Headline field removal tested
+- ✅ Router redirect tested - completed users skip onboarding after login
+- ✅ Pronouns required field validation tested
 - ❌ Daily Edition generation implemented but returns 0 candidates (no other users)
 - ❌ Episode system not yet implemented
 
 ## Git Status
 
 **Repository:** Active git repository
-**Total Commits:** 3
+**Total Commits:** 6
 - `8384b07` - Implement comprehensive 12-step onboarding flow for 7Eps dating app
 - `4235033` - Fix onboarding navigation and UX issues
 - `c326510` - Fix onboarding UX issues and improve controls
@@ -470,6 +489,20 @@ String _getErrorMessage(dynamic error) {
   - Remove headline field from Basics step
   - Improve age and distance controls with precise input
   - Add validation for age (18-100) and distance (10-200km) ranges
+- `ffd7d52` - Update project trace.md with recent improvements
+- `ea42911` - Fix router redirect to respect onboarding completion status
+- `6d3398b` - Fix router redirect and make pronouns required in onboarding
+  - Add ref.watch(onboardingProvider) to trigger rebuilds when data loads
+  - Add isLoading check to wait for onboarding data before redirecting
+  - Add debug logging to track redirect decisions
+  - Fix provider to reload onboarding data when auth state changes
+  - Redirect authenticated users with completed onboarding to /daily-edition
+  - Redirect authenticated users with incomplete onboarding to saved step
+  - Make pronouns a required field (was optional)
+  - Add pronouns validation to _isValid getter
+  - Add validator to pronouns dropdown
+  - Change label from "Pronouns (optional)" to "Pronouns *"
+  - Fix double-selection bug by properly checking pronouns in validation
 
 ---
 

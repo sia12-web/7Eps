@@ -169,12 +169,28 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     // Route to appropriate step screen
     switch (_currentStep) {
       case 1:
+        // Welcome slides - only show on step 1
+        return WelcomeSlidesStep(
+          initialSlide: 0,
+          currentStep: _currentStep,
+          onContinue: () {
+            // Skip steps 2 and 3, go directly to step 4 (Age Gate)
+            debugPrint('✅ Welcome slides complete, navigating to step 4 (Age Gate)');
+            context.go('/onboarding/4');
+          },
+        );
+
       case 2:
       case 3:
-        // Welcome slides (steps 1-3)
-        return WelcomeSlidesStep(
-          initialSlide: _currentStep - 1,
-          onContinue: _nextStep,
+        // Steps 2 and 3 are part of welcome slides - auto-advance to step 4
+        debugPrint('⚠️ User accessed step $_currentStep directly, auto-advancing to step 4');
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          context.go('/onboarding/4');
+        });
+        return const Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
         );
 
       case 4:

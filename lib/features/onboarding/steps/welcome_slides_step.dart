@@ -5,11 +5,13 @@ import 'package:sevent_eps/core/theme/app_theme.dart';
 /// Introduction to 7Eps
 class WelcomeSlidesStep extends StatefulWidget {
   final int initialSlide;
+  final int currentStep; // Current onboarding step (1, 2, or 3)
   final VoidCallback onContinue;
 
   const WelcomeSlidesStep({
     super.key,
     this.initialSlide = 0,
+    required this.currentStep,
     required this.onContinue,
   });
 
@@ -56,7 +58,7 @@ class _WelcomeSlidesStepState extends State<WelcomeSlidesStep> {
   }
 
   void _nextPage() {
-    debugPrint('📄 WelcomeSlides: _currentPage=$_currentPage, totalSlides=${_slides.length}');
+    debugPrint('📄 WelcomeSlides: _currentPage=$_currentPage, currentStep=${widget.currentStep}, totalSlides=${_slides.length}');
 
     if (_currentPage < _slides.length - 1) {
       debugPrint('→ Going to next slide');
@@ -65,8 +67,17 @@ class _WelcomeSlidesStepState extends State<WelcomeSlidesStep> {
         curve: Curves.easeInOut,
       );
     } else {
-      debugPrint('✅ Last slide reached, calling onContinue');
-      widget.onContinue();
+      // On last slide - check if we need to advance through onboarding steps or skip to Age Gate
+      if (widget.currentStep < 3) {
+        // We're on step 1 or 2, not yet at step 3
+        debugPrint('✅ Last slide but on step ${widget.currentStep}, calling onContinue to advance to next step');
+        widget.onContinue();
+      } else {
+        // We're on step 3 and the last slide - this means we've seen all slides
+        // Skip steps 1-3 and go directly to step 4 (Age Gate)
+        debugPrint('✅ Last slide on step 3, calling onContinue to go to step 4 (Age Gate)');
+        widget.onContinue();
+      }
     }
   }
 

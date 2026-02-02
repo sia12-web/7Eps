@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sevent_eps/core/theme/app_theme.dart';
 import 'package:sevent_eps/providers/onboarding_provider.dart';
 
-/// Basics step (Step 6)
-/// Collect core identity information: name, pronouns, city, university, headline
+/// Basics step (Step 5)
+/// Collect core identity information: name, pronouns, city, university
 class BasicsStep extends ConsumerStatefulWidget {
   final VoidCallback onContinue;
   final VoidCallback? onBack;
@@ -24,7 +24,6 @@ class _BasicsStepState extends ConsumerState<BasicsStep> {
   final _nameController = TextEditingController();
   final _cityController = TextEditingController();
   final _universityController = TextEditingController();
-  final _headlineController = TextEditingController();
 
   String? _selectedPronouns;
   String? _errorMessage;
@@ -41,7 +40,6 @@ class _BasicsStepState extends ConsumerState<BasicsStep> {
     _nameController.dispose();
     _cityController.dispose();
     _universityController.dispose();
-    _headlineController.dispose();
     super.dispose();
   }
 
@@ -70,12 +68,10 @@ class _BasicsStepState extends ConsumerState<BasicsStep> {
         if (_universityController.text.trim().isNotEmpty)
           'university': _universityController.text.trim(),
         if (_selectedPronouns != null) 'pronouns': _selectedPronouns,
-        if (_headlineController.text.trim().isNotEmpty)
-          'headline': _headlineController.text.trim(),
       };
 
       // Save step
-      await ref.read(onboardingProvider.notifier).saveStep(6, data);
+      await ref.read(onboardingProvider.notifier).saveStep(5, data);
 
       widget.onContinue();
     } catch (e) {
@@ -213,42 +209,13 @@ class _BasicsStepState extends ConsumerState<BasicsStep> {
                       TextFormField(
                         controller: _universityController,
                         textCapitalization: TextCapitalization.words,
-                        textInputAction: TextInputAction.next,
+                        textInputAction: TextInputAction.done,
                         decoration: _buildInputDecoration(
                           'Enter your university or campus',
                           Icons.school,
                         ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Headline (Optional)
-                      _buildSectionTitle('Headline (optional)'),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _headlineController,
-                        textCapitalization: TextCapitalization.sentences,
-                        maxLength: 100,
-                        textInputAction: TextInputAction.done,
-                        decoration: _buildInputDecoration(
-                          'Your vibe in 10 words or less',
-                          Icons.format_quote,
-                        ).copyWith(
-                          helperText: 'e.g., "Coffee addict seeking museum buddy"',
-                        ),
                         onFieldSubmitted: (_) => _submit(),
                       ),
-
-                      if (_headlineController.text.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            '${_headlineController.text.length}/100',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppTheme.charcoal.withOpacity(0.5),
-                                ),
-                          ),
-                        ),
 
                       const SizedBox(height: 32),
 

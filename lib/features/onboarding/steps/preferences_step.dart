@@ -1,9 +1,10 @@
+import 'dart:core';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sevent_eps/core/theme/app_theme.dart';
 import 'package:sevent_eps/providers/onboarding_provider.dart';
 
-/// Preferences step (Step 9)
+/// Preferences step (Step 8)
 /// Set dating preferences: gender interest, age range, distance
 class PreferencesStep extends ConsumerStatefulWidget {
   final VoidCallback onContinue;
@@ -23,20 +24,128 @@ class _PreferencesStepState extends ConsumerState<PreferencesStep> {
   static const List<String> _genderOptions = ['Men', 'Women', 'Everyone'];
   String _selectedGender = 'Everyone';
 
-  final List<double> _ageOptions = [18, 25, 30, 40, 50, 60, 70, 80, 90, 100];
   double _minAge = 18;
   double _maxAge = 100;
+  final TextEditingController _minAgeController = TextEditingController();
+  final TextEditingController _maxAgeController = TextEditingController();
 
-  final List<double> _distanceOptions = [10, 25, 50, 75, 100, 150, 200];
   double _selectedDistance = 50;
+  final TextEditingController _distanceController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeAgeRange();
+    // Initialize distance controller
+    _distanceController.text = _selectedDistance.toInt().toString();
+  }
+
+  @override
+  void dispose() {
+    _minAgeController.dispose();
+    _maxAgeController.dispose();
+    _distanceController.dispose();
+    super.dispose();
+  }
+
+  void _initializeAgeRange() {
+    // Get onboarding data to find user's DOB
+    final onboardingAsync = ref.read(onboardingProvider);
+    final onboardingData = onboardingAsync.value;
+
+    if (onboardingData != null) {
+      final dobString = onboardingData.getData<String>('dob');
+      if (dobString != null) {
+        try {
+          final dob = DateTime.parse(dobString);
+          final userAge = _calculateAge(dob);
+
+          // Set max age to user's age + 10, capped at 100
+          final defaultMaxAge = (userAge + 10).clamp(18, 100);
+          _maxAge = defaultMaxAge.toDouble();
+
+          // Set min age to be reasonable (user's age - 10, min 18)
+          _minAge = (userAge - 10).clamp(18, userAge).toDouble();
+
+          // Initialize controllers
+          _minAgeController.text = _minAge.toInt().toString();
+          _maxAgeController.text = _maxAge.toInt().toString();
+        } catch (e) {
+          // If parsing fails, use defaults
+          _maxAge = 100;
+          _minAge = 18;
+          _minAgeController.text = '18';
+          _maxAgeController.text = '100';
+        }
+      } else {
+        // No DOB found, use defaults
+        _maxAge = 100;
+        _minAge = 18;
+        _minAgeController.text = '18';
+        _maxAgeController.text = '100';
+      }
+    } else {
+      // No onboarding data, use defaults
+      _maxAge = 100;
+      _minAge = 18;
+      _minAgeController.text = '18';
+      _maxAgeController.text = '100';
+    }
+  }
+
+  int _calculateAge(DateTime birthDate) {
+    final today = DateTime.now();
+    int age = today.year - birthDate.year;
+
+    // Adjust if birthday hasn't occurred yet this year
+    if (today.month < birthDate.month ||
+        (today.month == birthDate.month && today.day < birthDate.day)) {
+      age--;
+    }
+
+    return age;
+  }
 
   Future<void> _submit() async {
     try {
-      await ref.read(onboardingProvider.notifier).saveStep(9, {
+      // Parse values from controllers to ensure we use the latest input
+      final minAge = int.tryParse(_minAgeController.text) ?? _minAge.toInt();
+      final maxAge = int.tryParse(_maxAgeController.text) ?? _maxAge.toInt();
+      final distance = int.tryParse(_distanceController.text) ?? _selectedDistance.toInt();
+
+      // Validate ranges
+      if (minAge < 18 || minAge > 100 || maxAge < 18 || maxAge > 100) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Age must be between 18 and 100')),
+          );
+        }
+        return;
+      }
+
+      if (minAge > maxAge) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Minimum age cannot be greater than maximum age')),
+          );
+        }
+        return;
+      }
+
+      if (distance < 10 || distance > 200) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Distance must be between 10 and 200 km')),
+          );
+        }
+        return;
+      }
+
+      await ref.read(onboardingProvider.notifier).saveStep(8, {
         'gender_interest': _selectedGender.toLowerCase(),
-        'age_min': _minAge.toInt(),
-        'age_max': _maxAge.toInt(),
-        'distance_radius': _selectedDistance.toInt(),
+        'age_min': minAge,
+        'age_max': maxAge,
+        'distance_radius': distance,
       });
 
       widget.onContinue();
@@ -171,41 +280,52 @@ class _PreferencesStepState extends ConsumerState<PreferencesStep> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Min',
+                              'Min Age (18-100)',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: AppTheme.charcoal.withOpacity(0.7),
                                   ),
                             ),
                             const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: AppTheme.charcoal.withOpacity(0.2),
+                            TextField(
+                              controller: _minAgeController,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                hintText: '18',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                                borderRadius: BorderRadius.circular(8),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: AppTheme.charcoal.withOpacity(0.2),
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: const BorderSide(
+                                    color: AppTheme.sageGreen,
+                                    width: 2,
+                                  ),
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
                               ),
-                              child: DropdownButton<int>(
-                                value: _minAge.toInt(),
-                                isExpanded: true,
-                                underline: const SizedBox.shrink(),
-                                items: _ageOptions
-                                    .where((age) => age <= _maxAge)
-                                    .map((age) {
-                                  return DropdownMenuItem<int>(
-                                    value: age.toInt(),
-                                    child: Text('$age'),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  if (value != null) {
-                                    setState(() {
-                                      if (value > _maxAge) _maxAge = value.toDouble();
-                                      _minAge = value.toDouble();
-                                    });
-                                  }
-                                },
-                              ),
+                              onChanged: (value) {
+                                final age = int.tryParse(value);
+                                if (age != null && age >= 18 && age <= 100) {
+                                  setState(() {
+                                    _minAge = age.toDouble();
+                                    if (_minAge > _maxAge) {
+                                      _maxAge = _minAge;
+                                      _maxAgeController.text = _maxAge.toInt().toString();
+                                    }
+                                  });
+                                }
+                              },
                             ),
                           ],
                         ),
@@ -216,47 +336,59 @@ class _PreferencesStepState extends ConsumerState<PreferencesStep> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Max',
+                              'Max Age (18-100)',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: AppTheme.charcoal.withOpacity(0.7),
                                   ),
                             ),
                             const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: AppTheme.charcoal.withOpacity(0.2),
+                            TextField(
+                              controller: _maxAgeController,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                hintText: '100',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                                borderRadius: BorderRadius.circular(8),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: AppTheme.charcoal.withOpacity(0.2),
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: const BorderSide(
+                                    color: AppTheme.sageGreen,
+                                    width: 2,
+                                  ),
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
                               ),
-                              child: DropdownButton<int>(
-                                value: _maxAge.toInt(),
-                                isExpanded: true,
-                                underline: const SizedBox.shrink(),
-                                items: _ageOptions
-                                    .where((age) => age >= _minAge)
-                                    .map((age) {
-                                  return DropdownMenuItem<int>(
-                                    value: age.toInt(),
-                                    child: Text('$age'),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  if (value != null) {
-                                    setState(() {
-                                      if (value < _minAge) _minAge = value.toDouble();
-                                      _maxAge = value.toDouble();
-                                    });
-                                  }
-                                },
-                              ),
+                              onChanged: (value) {
+                                final age = int.tryParse(value);
+                                if (age != null && age >= 18 && age <= 100) {
+                                  setState(() {
+                                    _maxAge = age.toDouble();
+                                    if (_maxAge < _minAge) {
+                                      _minAge = _maxAge;
+                                      _minAgeController.text = _minAge.toInt().toString();
+                                    }
+                                  });
+                                }
+                              },
                             ),
                           ],
                         ),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 8),
                   Text(
                     'Ages ${_minAge.toInt()} - ${_maxAge.toInt()}',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -269,22 +401,72 @@ class _PreferencesStepState extends ConsumerState<PreferencesStep> {
                   const SizedBox(height: 24),
 
                   // Distance Radius
-                  _buildSectionTitle('Distance'),
+                  _buildSectionTitle('Distance (km)'),
                   const SizedBox(height: 12),
                   Column(
                     children: [
+                      // Continuous slider for visual feedback
                       Slider(
                         value: _selectedDistance,
                         min: 10,
                         max: 200,
-                        divisions: 6,
+                        divisions: 190, // Every 1 km (200 - 10 = 190 steps)
                         activeColor: AppTheme.terracotta,
                         onChanged: (value) {
                           setState(() {
                             _selectedDistance = value;
+                            _distanceController.text = value.toInt().toString();
                           });
                         },
                       ),
+                      const SizedBox(height: 12),
+                      // Text field for precise input
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _distanceController,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                hintText: '50',
+                                labelText: 'Distance in kilometers',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: AppTheme.charcoal.withOpacity(0.2),
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: const BorderSide(
+                                    color: AppTheme.sageGreen,
+                                    width: 2,
+                                  ),
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
+                                suffixText: 'km',
+                              ),
+                              onChanged: (value) {
+                                final distance = int.tryParse(value);
+                                if (distance != null && distance >= 10 && distance <= 200) {
+                                  setState(() {
+                                    _selectedDistance = distance.toDouble();
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
                       Text(
                         'Within ${_selectedDistance.toInt()} km',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(

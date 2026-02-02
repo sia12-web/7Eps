@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -36,12 +37,14 @@ class _PhotosStepState extends ConsumerState<PhotosStep> {
 
   @override
   void dispose() {
-    // Clean up temporary files
-    for (final image in _selectedImages) {
-      try {
-        File(image.path).deleteSync();
-      } catch (e) {
-        debugPrint('Error deleting temp file: $e');
+    // Clean up temporary files only on non-web platforms
+    if (!kIsWeb) {
+      for (final image in _selectedImages) {
+        try {
+          File(image.path).deleteSync();
+        } catch (e) {
+          debugPrint('Error deleting temp file: $e');
+        }
       }
     }
     super.dispose();
@@ -148,10 +151,44 @@ class _PhotosStepState extends ConsumerState<PhotosStep> {
 
                     // Subtitle
                     Text(
-                      'Min $_minPhotos, max $_maxPhotos',
+                      'Add $_minPhotos-$_maxPhotos photos to your profile',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                             color: AppTheme.charcoal.withOpacity(0.7),
                           ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // Explanation about blur
+                    Container(
+                      padding: const EdgeInsets.all(16.0),
+                      decoration: BoxDecoration(
+                        color: AppTheme.sageGreen.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                color: AppTheme.sageGreen,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Your photos will be blurred at Episode 1 and gradually become clearer as you progress through the 7-episode journey with your match.',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: AppTheme.charcoal.withOpacity(0.7),
+                                        height: 1.4,
+                                      ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
 
                     const SizedBox(height: 24),
@@ -260,7 +297,7 @@ class _PhotosStepState extends ConsumerState<PhotosStep> {
 
                     const SizedBox(height: 24),
 
-                    // Info text about blur
+                    // Info text about blur progression
                     Container(
                       padding: const EdgeInsets.all(16.0),
                       decoration: BoxDecoration(
@@ -268,24 +305,42 @@ class _PhotosStepState extends ConsumerState<PhotosStep> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
                               Icon(
-                                Icons.info_outline,
+                                Icons.trending_up,
                                 color: AppTheme.sageGreen,
-                                size: 20,
+                                size: 18,
                               ),
                               const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Your photos will be blurred at Episode 1 and gradually unblur as you progress through the journey.',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: AppTheme.charcoal.withOpacity(0.7),
-                                      ),
-                                ),
+                              Text(
+                                'Progressive Reveal',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
                               ),
                             ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '• Episode 1: Heavily blurred (what you see now)',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppTheme.charcoal.withOpacity(0.7),
+                                ),
+                          ),
+                          Text(
+                            '• Episodes 2-6: Gradually clearer',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppTheme.charcoal.withOpacity(0.7),
+                                ),
+                          ),
+                          Text(
+                            '• Episode 7: Completely clear',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppTheme.charcoal.withOpacity(0.7),
+                                ),
                           ),
                         ],
                       ),
@@ -307,120 +362,167 @@ class _PhotosStepState extends ConsumerState<PhotosStep> {
 
     return Column(
       children: [
-        AspectRatio(
-          aspectRatio: 1,
-          child: Stack(
-            children: [
-              // Display first photo with blur preview
-              _buildBlurredPhoto(_selectedImages[0]),
+        // Photo grid with all photos showing blur preview
+        SizedBox(
+          height: 400,
+          child: GridView.builder(
+            shrinkWrap: true,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+            ),
+            itemCount: _selectedImages.length,
+            itemBuilder: (context, index) {
+              return Stack(
+                children: [
+                  // Display photo with blur preview
+                  _buildBlurredPhoto(_selectedImages[index]),
 
-              // Photo indicators
-              if (_selectedImages.length > 1)
-                Positioned(
-                  bottom: 16,
-                  left: 0,
-                  right: 0,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(_selectedImages.length, (index) {
-                      return Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        width: 8,
-                        height: 8,
+                  // Photo number badge
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${index + 1}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Remove button
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: GestureDetector(
+                      onTap: () => _removeImage(index),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: index == 0 ? AppTheme.sageGreen : AppTheme.charcoal.withOpacity(0.3),
+                          color: Colors.black.withOpacity(0.6),
                           shape: BoxShape.circle,
                         ),
-                      );
-                    }),
+                        child: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-            ],
+                ],
+              );
+            },
           ),
         ),
 
         const SizedBox(height: 16),
 
-        // Remove button
-        if (_selectedImages.isNotEmpty)
-          TextButton.icon(
-            onPressed: () => _removeImage(0),
-            icon: const Icon(Icons.delete_outline, color: AppTheme.terracotta),
-            label: const Text('Remove photo'),
-            style: TextButton.styleFrom(
-              foregroundColor: AppTheme.terracotta,
-            ),
+        // Episode 1 explanation
+        Container(
+          padding: const EdgeInsets.all(12.0),
+          decoration: BoxDecoration(
+            color: AppTheme.sageGreen.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
           ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.visibility_off,
+                color: AppTheme.sageGreen,
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Preview: How your photos appear at Episode 1 (heavily blurred)',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.charcoal.withOpacity(0.7),
+                      ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildBlurredPhoto(XFile image) {
-    return Stack(
-      children: [
-        // Photo
-        Image.file(
-          File(image.path),
-          width: double.infinity,
-          height: double.infinity,
-          fit: BoxFit.cover,
-        ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Photo - use different approach for web vs mobile
+          _buildPlatformImage(image),
 
-        // Blur overlay (Episode 1 appearance)
-        Positioned.fill(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              color: Colors.transparent,
-            ),
-          ),
-        ),
-
-        // "Episode 1 Preview" badge
-        Positioned(
-          top: 16,
-          left: 16,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppTheme.sageGreen.withOpacity(0.9),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'Episode 1 Preview',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+          // Blur overlay (Episode 1 appearance)
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                color: Colors.transparent,
               ),
             ),
           ),
-        ),
 
-        // Tap to preview text
-        Positioned(
-          bottom: 16,
-          left: 0,
-          right: 0,
-          child: Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.6),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                'This is how you appear at Episode 1',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+          // Center icon to indicate blur
+          const Center(
+            child: Icon(
+              Icons.blur_on,
+              color: Colors.white54,
+              size: 32,
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
+  }
+
+  Widget _buildPlatformImage(XFile image) {
+    // On web, XFile.path is a blob URL that works with Image.network
+    // On mobile/desktop, we need to use Image.file with a File object
+    if (kIsWeb) {
+      return Image.network(
+        image.path,
+        width: double.infinity,
+        height: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: AppTheme.charcoal.withOpacity(0.1),
+            child: const Center(
+              child: Icon(Icons.broken_image, size: 48, color: Colors.grey),
+            ),
+          );
+        },
+      );
+    } else {
+      return Image.file(
+        File(image.path),
+        width: double.infinity,
+        height: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: AppTheme.charcoal.withOpacity(0.1),
+            child: const Center(
+              child: Icon(Icons.broken_image, size: 48, color: Colors.grey),
+            ),
+          );
+        },
+      );
+    }
   }
 }

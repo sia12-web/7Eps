@@ -2,17 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:sevent_eps/core/theme/app_theme.dart';
 
 /// Welcome slides for steps 1-3 of onboarding
-/// Skippable introduction to 7Eps
+/// Introduction to 7Eps
 class WelcomeSlidesStep extends StatefulWidget {
   final int initialSlide;
   final VoidCallback onContinue;
-  final VoidCallback onSkip;
 
   const WelcomeSlidesStep({
     super.key,
     this.initialSlide = 0,
     required this.onContinue,
-    required this.onSkip,
   });
 
   @override
@@ -58,12 +56,16 @@ class _WelcomeSlidesStepState extends State<WelcomeSlidesStep> {
   }
 
   void _nextPage() {
+    debugPrint('📄 WelcomeSlides: _currentPage=$_currentPage, totalSlides=${_slides.length}');
+
     if (_currentPage < _slides.length - 1) {
+      debugPrint('→ Going to next slide');
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
     } else {
+      debugPrint('✅ Last slide reached, calling onContinue');
       widget.onContinue();
     }
   }
@@ -74,24 +76,6 @@ class _WelcomeSlidesStepState extends State<WelcomeSlidesStep> {
       body: SafeArea(
         child: Column(
           children: [
-            // Skip button
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Align(
-                alignment: Alignment.topRight,
-                child: TextButton(
-                  onPressed: widget.onSkip,
-                  child: Text(
-                    'Skip',
-                    style: TextStyle(
-                      color: AppTheme.charcoal.withOpacity(0.6),
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
             // PageView for slides
             Expanded(
               child: PageView.builder(

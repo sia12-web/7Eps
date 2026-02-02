@@ -6,7 +6,6 @@ import 'package:sevent_eps/models/onboarding_data.dart';
 import 'package:sevent_eps/providers/onboarding_provider.dart';
 import 'package:sevent_eps/features/onboarding/steps/welcome_slides_step.dart';
 import 'package:sevent_eps/features/onboarding/steps/age_gate_step.dart';
-import 'package:sevent_eps/features/onboarding/steps/auth_step.dart';
 import 'package:sevent_eps/features/onboarding/steps/basics_step.dart';
 import 'package:sevent_eps/features/onboarding/steps/interests_step.dart';
 import 'package:sevent_eps/features/onboarding/steps/photos_step.dart';
@@ -30,23 +29,27 @@ class OnboardingFlowScreen extends ConsumerStatefulWidget {
 }
 
 class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
-  late int _currentStep;
-  final int _totalSteps = 12;
+  final int _totalSteps = 11; // Reduced from 12 after removing Auth step
+
+  int get _currentStep => widget.initialStep;
 
   @override
   void initState() {
     super.initState();
-    _currentStep = widget.initialStep;
     debugPrint('🚀 OnboardingFlowScreen init: step $_currentStep');
   }
 
   void _nextStep() {
+    debugPrint('➡️ _nextStep called: current=$_currentStep, total=$_totalSteps');
+
     if (_currentStep < _totalSteps) {
-      setState(() {
-        _currentStep++;
-      });
-      // Navigate to new step
-      context.go('/onboarding/$_currentStep');
+      // Navigate first, then update state
+      final nextStep = _currentStep + 1;
+      debugPrint('🌐 Navigating to: /onboarding/$nextStep');
+
+      context.go('/onboarding/$nextStep');
+
+      // State will be updated when the widget rebuilds with new initialStep
     } else {
       // Onboarding complete - should be handled by final step
       debugPrint('✅ Onboarding complete!');
@@ -55,17 +58,10 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
 
   void _previousStep() {
     if (_currentStep > 1) {
-      setState(() {
-        _currentStep--;
-      });
-      context.go('/onboarding/$_currentStep');
+      // Navigate first, then state will update on rebuild
+      final prevStep = _currentStep - 1;
+      context.go('/onboarding/$prevStep');
     }
-  }
-
-  void _skipWelcome() {
-    // Skip welcome slides and go to age gate
-    _currentStep = 4;
-    context.go('/onboarding/4');
   }
 
   @override
@@ -179,7 +175,6 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
         return WelcomeSlidesStep(
           initialSlide: _currentStep - 1,
           onContinue: _nextStep,
-          onSkip: _skipWelcome,
         );
 
       case 4:
@@ -190,56 +185,49 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
         );
 
       case 5:
-        // Auth step
-        return AuthStep(
-          onContinue: _nextStep,
-          onBack: _currentStep > 1 ? _previousStep : null,
-        );
-
-      case 6:
-        // Basics
+        // Basics (moved from step 6)
         return BasicsStep(
           onContinue: _nextStep,
           onBack: _previousStep,
         );
 
-      case 7:
-        // Interests
+      case 6:
+        // Interests (moved from step 7)
         return InterestsStep(
           onContinue: _nextStep,
           onBack: _previousStep,
         );
 
-      case 8:
-        // Photos
+      case 7:
+        // Photos (moved from step 8)
         return PhotosStep(
           onContinue: _nextStep,
           onBack: _previousStep,
         );
 
-      case 9:
-        // Preferences
+      case 8:
+        // Preferences (moved from step 9)
         return PreferencesStep(
           onContinue: _nextStep,
           onBack: _previousStep,
         );
 
-      case 10:
-        // Safety agreement
+      case 9:
+        // Safety agreement (moved from step 10)
         return SafetyStep(
           onContinue: _nextStep,
           onBack: _previousStep,
         );
 
-      case 11:
-        // Tutorial
+      case 10:
+        // Tutorial (moved from step 11)
         return TutorialStep(
           onContinue: _nextStep,
           onBack: _previousStep,
         );
 
-      case 12:
-        // Generate daily edition
+      case 11:
+        // Generate daily edition (moved from step 12)
         return const GenerateDailyEditionStep();
 
       default:

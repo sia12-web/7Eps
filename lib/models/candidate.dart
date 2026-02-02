@@ -8,6 +8,8 @@ class Candidate {
   final String? city;
   final ProfilePhoto? photo;
   final String tagline;
+  final List<String> interests;
+  final String compatibilityHint;
 
   const Candidate({
     required this.userId,
@@ -16,6 +18,8 @@ class Candidate {
     this.city,
     this.photo,
     required this.tagline,
+    this.interests = const [],
+    this.compatibilityHint = '',
   });
 
   factory Candidate.fromJson(Map<String, dynamic> json) {
@@ -26,6 +30,25 @@ class Candidate {
     debugPrint('   - candidate_city: ${json['candidate_city']}');
     debugPrint('   - candidate_photo_url: ${json['candidate_photo_url']}');
     debugPrint('   - candidate_tagline: ${json['candidate_tagline']}');
+    debugPrint('   - candidate_interests: ${json['candidate_interests']}');
+    debugPrint('   - candidate_compatibility_hint: ${json['candidate_compatibility_hint']}');
+
+    // Parse interests
+    List<String> interests = [];
+    if (json['candidate_interests'] != null) {
+      if (json['candidate_interests'] is List) {
+        interests = (json['candidate_interests'] as List<dynamic>)
+            .map((e) => e.toString())
+            .toList();
+      } else if (json['candidate_interests'] is String) {
+        interests = [json['candidate_interests'] as String];
+      }
+    }
+
+    // Take up to 2 interests
+    if (interests.length > 2) {
+      interests = interests.sublist(0, 2);
+    }
 
     return Candidate(
       userId: json['candidate_user_id'] as String,
@@ -42,7 +65,21 @@ class Candidate {
             )
           : null,
       tagline: json['candidate_tagline'] as String? ?? 'Exploring',
+      interests: interests,
+      compatibilityHint: json['candidate_compatibility_hint'] as String? ?? _getCompatibilityHint(),
     );
+  }
+
+  static String _getCompatibilityHint() {
+    final hints = [
+      'Shared lifestyle rhythm',
+      'Similar values',
+      'Complementary energies',
+      'Common ground',
+      'Aligned paths',
+      'Natural connection',
+    ];
+    return hints[(DateTime.now().millisecondsSinceEpoch / 1000).floor() % hints.length];
   }
 
   /// Create candidate from full profile
@@ -98,6 +135,8 @@ class Candidate {
     String? city,
     ProfilePhoto? photo,
     String? tagline,
+    List<String>? interests,
+    String? compatibilityHint,
   }) =>
       Candidate(
         userId: userId ?? this.userId,
@@ -106,5 +145,7 @@ class Candidate {
         city: city ?? this.city,
         photo: photo ?? this.photo,
         tagline: tagline ?? this.tagline,
+        interests: interests ?? this.interests,
+        compatibilityHint: compatibilityHint ?? this.compatibilityHint,
       );
 }

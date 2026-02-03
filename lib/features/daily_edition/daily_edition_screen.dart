@@ -2,9 +2,11 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sevent_eps/core/theme/app_theme.dart';
 import 'package:sevent_eps/providers/daily_edition_provider.dart';
 import 'package:sevent_eps/providers/match_provider.dart';
+import 'package:sevent_eps/providers/lens_provider.dart';
 import 'package:sevent_eps/models/candidate.dart';
 
 class DailyEditionScreen extends ConsumerStatefulWidget {
@@ -279,6 +281,11 @@ class _DailyEditionScreenState extends ConsumerState<DailyEditionScreen>
 
           const SizedBox(height: 16),
 
+          // Lens chips/nudge (NEW)
+          _buildLensSection(),
+
+          const SizedBox(height: 16),
+
           // Rotating microcopy
           FadeTransition(
             opacity: _microcopyAnimation,
@@ -293,6 +300,116 @@ class _DailyEditionScreenState extends ConsumerState<DailyEditionScreen>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildLensSection() {
+    final asyncUserLenses = ref.watch(userLensesProvider);
+
+    return asyncUserLenses.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (userLenses) {
+        // No lenses selected - show nudge
+        if (userLenses.isEmpty) {
+          return GestureDetector(
+            onTap: () => context.push('/lens-picker'),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.terracotta.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppTheme.terracotta.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.tune,
+                    color: AppTheme.terracotta,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Pick 3 lenses to improve your editions (30 seconds)',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.terracotta,
+                            fontWeight: FontWeight.w500,
+                          ),
+                    ),
+                  ),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    color: AppTheme.terracotta,
+                    size: 16,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Show lens chips
+        final lenses = userLenses.map((ul) => ul.lens).toList();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Your lenses:',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.charcoal.withOpacity(0.6),
+                      ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () => context.push('/lens-picker'),
+                  child: Text(
+                    'Edit',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.sageGreen,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: lenses.map((lens) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.sageGreen.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: AppTheme.sageGreen.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    lens.name,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.sageGreen,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        );
+      },
     );
   }
 

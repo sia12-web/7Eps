@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/widgets/app_logo.dart';
 
 class AuthScreen extends StatelessWidget {
   const AuthScreen({super.key});
@@ -17,21 +18,14 @@ class AuthScreen extends StatelessWidget {
               const Spacer(),
 
               // Logo/Title
-              Text(
-                '7Eps',
-                style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                  color: const Color(0xFFC17F59), // Terracotta
-                  fontSize: 72,
-                  fontWeight: FontWeight.w800,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
+              const AppLogo(size: 180, showText: false),
+              const SizedBox(height: 24),
 
               Text(
                 '7 Episodes to Connection',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: const Color(0xFF3D3D3D).withOpacity(0.7),
+                  fontWeight: FontWeight.w600,
                 ),
                 textAlign: TextAlign.center,
               ),

@@ -598,6 +598,85 @@ String _getErrorMessage(dynamic error) {
 
 ---
 
-**Last Updated:** 2026-02-02
-**Current Phase:** Phase 3 (Daily Edition) - COMPLETE
-**Next Phase:** Phase 4 (Episode Engine)
+## ✅ Phase 4: Episode 1 + Journey Timeline (COMPLETE)
+
+**Episode 1 ("The Icebreaker") Implementation:**
+
+**3-Phase State Machine:**
+1. **PROMPT_INPUT** - User sees rotating prompt and submits answer (300 char max)
+2. **WAITING_FOR_PARTNER** - "Waiting for their answer…" with spinner
+3. **BOTH_SUBMITTED** - Side-by-side answers + celebration + "Unlocked: 25% Reveal"
+
+**Key Features:**
+- Rotating prompt pool (10 unique Episode 1 prompts)
+- Server-side enforcement: NO duplicate submissions for Episode 1
+- Auto-advance to Episode 2 when BOTH users submit
+- Page turn animation (slide + fade) when both submit
+- Real-time status updates via `episodeStatusProvider`
+- Celebration card: "Your partner's photo is now slightly less blurred"
+
+**Journey Screen ("The Book" Timeline):**
+- Episode progress bar (1/7 → 2/7 etc.)
+- Blurred partner photo with progressive unblur
+- "Your Story So Far" timeline header
+- Journal-style artifact cards (NOT chat bubbles)
+- Chapter badges, timestamps, prompt displays
+- "What's Revealed" section showing unlocked features
+- Current episode CTA card
+
+**Photo Blur Progression (Fixed):**
+- Episode 1: 15.0 blur (~90% hidden)
+- Episode 2: 7.5 blur (25% reveal)
+- Episode 3: 3.75 blur (50% reveal)
+- Episode 4: 1.5 blur (75% reveal)
+- Episode 5+: 0 blur (100% reveal)
+
+**Database Migrations Created:**
+- `018_add_episode_prompts.sql` - 10 rotating Episode 1 prompts
+- `019_enable_realtime.sql` - Realtime on artifacts table
+- `020_episode_status_rpc.sql` - Episode status + timeline RPCs
+- `003_functions_triggers.sql` (updated) - Enhanced submit_artifact with prompt support
+
+**Providers Created:**
+- `episode_status_provider.dart` - Real-time Episode 1 state machine tracking
+- `artifact_timeline_provider.dart` - Timeline management (manual refresh for now)
+- `artifact_provider.dart` (updated) - promptId parameter support
+
+**UI Files Created/Modified:**
+- `episode_1_screen.dart` - Complete 3-phase state machine redesign
+- `journey_screen.dart` - Enhanced with "Book" timeline UI
+- `match.dart` (updated) - Fixed blur amount calculations
+
+**Router Routes Added:**
+- `/journey/:matchId` - Journey detail screen
+- `/journey/:matchId/episode/:episodeNum` - Episode screens (1-7)
+
+**Implementation Highlights:**
+- No freeform chat before Episode 1 completion
+- Both users must submit to advance
+- Server-side episode advancement (RPC + triggers)
+- RLS policies prevent duplicate submissions
+- Realtime subscriptions enabled (auto-refresh pending API update)
+- Journal-style artifact display (not bubble chat)
+
+**Files Created/Modified:**
+- `supabase/migrations/018_add_episode_prompts.sql` - Episode prompts table
+- `supabase/migrations/019_enable_realtime.sql` - Enable Realtime
+- `supabase/migrations/020_episode_status_rpc.sql` - Status & timeline RPCs
+- `lib/providers/episode_status_provider.dart` - Status tracking
+- `lib/providers/artifact_timeline_provider.dart` - Timeline provider
+- `lib/providers/artifact_provider.dart` - promptId support
+- `lib/models/artifact.dart` - Added fromString method
+- `lib/models/match.dart` - Fixed blur amounts
+- `lib/features/journey/episodes/episode_1_screen.dart` - Complete rewrite
+- `lib/features/journey/journey_screen.dart` - Timeline UI added
+
+**Known Issues:**
+- Realtime auto-refresh simplified to manual (pending API compatibility update)
+- Disk space issues prevented testing (resolved by clearing temp cache)
+
+---
+
+**Last Updated:** 2026-02-03
+**Current Phase:** Phase 4 (Episode 1 + Journey Timeline) - COMPLETE
+**Next Phase:** Phase 5 (Episodes 2-7)

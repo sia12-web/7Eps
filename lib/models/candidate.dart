@@ -10,6 +10,8 @@ class Candidate {
   final String tagline;
   final List<String> interests;
   final String compatibilityHint;
+  final double? matchScore;
+  final Map<String, dynamic>? scoreBreakdown;
 
   const Candidate({
     required this.userId,
@@ -20,6 +22,8 @@ class Candidate {
     required this.tagline,
     this.interests = const [],
     this.compatibilityHint = '',
+    this.matchScore,
+    this.scoreBreakdown,
   });
 
   factory Candidate.fromJson(Map<String, dynamic> json) {
@@ -67,6 +71,10 @@ class Candidate {
       tagline: json['candidate_tagline'] as String? ?? 'Exploring',
       interests: interests,
       compatibilityHint: json['candidate_compatibility_hint'] as String? ?? _getCompatibilityHint(),
+      matchScore: json['match_score'] != null
+          ? (json['match_score'] as num).toDouble()
+          : null,
+      scoreBreakdown: json['score_breakdown'] as Map<String, dynamic>?,
     );
   }
 
@@ -137,6 +145,8 @@ class Candidate {
     String? tagline,
     List<String>? interests,
     String? compatibilityHint,
+    double? matchScore,
+    Map<String, dynamic>? scoreBreakdown,
   }) =>
       Candidate(
         userId: userId ?? this.userId,
@@ -147,5 +157,7 @@ class Candidate {
         tagline: tagline ?? this.tagline,
         interests: interests ?? this.interests,
         compatibilityHint: compatibilityHint ?? this.compatibilityHint,
+        matchScore: matchScore ?? this.matchScore,
+        scoreBreakdown: scoreBreakdown ?? this.scoreBreakdown,
       );
 }

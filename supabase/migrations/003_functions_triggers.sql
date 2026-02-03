@@ -10,7 +10,8 @@
 CREATE OR REPLACE FUNCTION submit_artifact(
   p_match_id UUID,
   p_type TEXT,
-  p_payload JSONB
+  p_payload JSONB,
+  p_prompt_id UUID DEFAULT NULL
 )
 RETURNS JSONB AS $$
 DECLARE
@@ -20,6 +21,7 @@ DECLARE
   v_artifacts_count INT;
   v_is_valid_type BOOLEAN;
   v_artifact_id UUID;
+  v_assigned_prompt_id UUID;
 BEGIN
   -- Get current user from auth
   v_user_id := auth.uid();
@@ -74,9 +76,36 @@ BEGIN
     RAISE EXCEPTION 'You have already submitted for episode %', v_current_episode;
   END IF;
 
-  -- Insert artifact
-  INSERT INTO public.artifacts (match_id, user_id, episode, type, payload)
-  VALUES (p_match_id, v_user_id, v_current_episode, p_type, p_payload)
+  -- Episode 1: Assign random prompt if not provided
+  IF v_current_episode = 1 AND p_prompt_id IS NULL THEN
+    SELECT id INTO v_assigned_prompt_id
+    FROM public.episode_prompts
+    WHERE episode = 1 AND is_active = true
+    ORDER BY RANDOM()
+    LIMIT 1;
+
+    IF v_assigned_prompt_id IS NULL THEN
+      RAISE EXCEPTION 'No active prompts available for Episode 1';
+    END IF;
+
+    -- Update prompt usage count
+    UPDATE public.episode_prompts
+    SET used_count = used_count + 1
+    WHERE id = v_assigned_prompt_id;
+  ELSE
+    v_assigned_prompt_id := p_prompt_id;
+  END IF;
+
+  -- Insert artifact with prompt_id for Episode 1
+  INSERT INTO public.artifacts (match_id, user_id, episode, type, payload, prompt_id)
+  VALUES (
+    p_match_id,
+    v_user_id,
+    v_current_episode,
+    p_type,
+    p_payload,
+    CASE WHEN v_current_episode = 1 THEN v_assigned_prompt_id ELSE NULL END
+  )
   RETURNING id INTO v_artifact_id;
 
   -- Check if both participants have submitted for this episode
@@ -99,17 +128,25 @@ BEGIN
     WHERE id = p_match_id;
   END IF;
 
-  -- Return success with episode info
+  -- Return success with enhanced episode info
   RETURN jsonb_build_object(
     'success', true,
     'artifact_id', v_artifact_id,
     'episode', v_current_episode,
+    'episode_completed', v_artifacts_count >= 2,
     'episode_advanced', v_artifacts_count >= 2,
     'new_episode', CASE
       WHEN v_artifacts_count >= 2 THEN v_current_episode + 1
       ELSE v_current_episode
     END,
-    'journey_completed', v_artifacts_count >= 2 AND v_current_episode + 1 > 7
+    'journey_completed', v_artifacts_count >= 2 AND v_current_episode + 1 > 7,
+    'partner_submitted', EXISTS(
+      SELECT 1 FROM public.artifacts
+      WHERE match_id = p_match_id
+        AND episode = v_current_episode
+        AND user_id != v_user_id
+    ),
+    'prompt_id', v_assigned_prompt_id
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

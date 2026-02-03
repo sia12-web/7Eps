@@ -8,6 +8,7 @@ import 'package:sevent_eps/features/profile/onboarding_screen.dart';
 import 'package:sevent_eps/features/profile/edit_profile_screen.dart';
 import 'package:sevent_eps/features/home/home_screen.dart';
 import 'package:sevent_eps/features/daily_edition/daily_edition_screen.dart';
+import 'package:sevent_eps/features/lenses/lens_picker_screen.dart';
 import 'package:sevent_eps/features/journey/journeys_list_screen.dart';
 import 'package:sevent_eps/features/journey/journey_screen.dart';
 import 'package:sevent_eps/features/journey/episodes/episode_1_screen.dart';
@@ -142,6 +143,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/daily-edition',
         name: 'daily-edition',
         builder: (context, state) => const DailyEditionScreen(),
+      ),
+
+      // Lens Picker Route
+      GoRoute(
+        path: '/lens-picker',
+        name: 'lens-picker',
+        builder: (context, state) => const LensPickerScreen(),
       ),
 
       // Profile Routes

@@ -38,24 +38,17 @@ class Artifact {
       );
 
   static ArtifactType _parseType(String type) {
-    switch (type) {
-      case 'prompt_answer':
-        return ArtifactType.promptAnswer;
-      case 'voice':
-        return ArtifactType.voice;
-      case 'photo':
-        return ArtifactType.photo;
-      case 'tags':
-        return ArtifactType.tags;
-      case 'dealbreakers':
-        return ArtifactType.dealbreakers;
-      case 'scenario':
-        return ArtifactType.scenario;
-      case 'date_choice':
-        return ArtifactType.dateChoice;
-      default:
-        return ArtifactType.promptAnswer;
-    }
+    return type == 'prompt_answer'
+        ? ArtifactType.promptAnswer
+        : ArtifactType.values.firstWhere(
+            (e) => e.name == type,
+            orElse: () => ArtifactType.promptAnswer,
+          );
+  }
+
+  /// Public method to parse artifact type from string
+  static ArtifactType fromString(String type) {
+    return _parseType(type);
   }
 
   Map<String, dynamic> toJson() => {

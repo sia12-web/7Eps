@@ -50,13 +50,15 @@ class Match {
   double get blurAmount {
     switch (currentEpisode) {
       case 1:
-        return 10.0; // 90% blur
+        return 15.0; // Heavy blur (~90% hidden)
       case 2:
-        return 5.0; // 50% blur
+        return 7.5; // 25% reveal = 75% blur
       case 3:
-        return 2.5; // 25% blur
+        return 3.75; // 50% reveal = 50% blur
+      case 4:
+        return 1.5; // 75% reveal = 25% blur
       default:
-        return 0.0; // No blur (ep 4+)
+        return 0.0; // Episode 5+: 100% reveal (no blur)
     }
   }
 
@@ -64,13 +66,15 @@ class Match {
   int get unblurPercentage {
     switch (currentEpisode) {
       case 1:
-        return 25;
+        return 10; // Heavy blur
       case 2:
-        return 50;
+        return 25; // After Episode 1 completion
       case 3:
-        return 75;
+        return 50; // After Episode 2 completion
+      case 4:
+        return 75; // After Episode 3 completion
       default:
-        return 100;
+        return 100; // Episode 5+: Fully revealed
     }
   }
 

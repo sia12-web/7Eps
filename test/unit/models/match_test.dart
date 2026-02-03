@@ -3,53 +3,66 @@ import 'package:sevent_eps/models/match.dart';
 
 void main() {
   group('Match Model', () {
+    final now = DateTime.now();
+
     test('should calculate correct blur amount for episode 1', () {
-      const match = Match(
+      final match = Match(
         id: '1',
-        createdAt: Duration(seconds: 0) as DateTime,
+        createdAt: now,
         currentEpisode: 1,
       );
 
-      expect(match.blurAmount, 10.0);
-      expect(match.unblurPercentage, 25);
+      expect(match.blurAmount, 15.0);
+      expect(match.unblurPercentage, 10);
       expect(match.showBio, false);
       expect(match.showInterests, false);
       expect(match.showCompatibility, false);
     });
 
     test('should calculate correct blur amount for episode 2', () {
-      const match = Match(
+      final match = Match(
         id: '2',
-        createdAt: Duration(seconds: 0) as DateTime,
+        createdAt: now,
         currentEpisode: 2,
       );
 
-      expect(match.blurAmount, 5.0);
-      expect(match.unblurPercentage, 50);
+      expect(match.blurAmount, 7.5);
+      expect(match.unblurPercentage, 25);
       expect(match.showBio, true);
       expect(match.showInterests, true);
       expect(match.showCompatibility, false);
     });
 
     test('should calculate correct blur amount for episode 3', () {
-      const match = Match(
+      final match = Match(
         id: '3',
-        createdAt: Duration(seconds: 0) as DateTime,
+        createdAt: now,
         currentEpisode: 3,
       );
 
-      expect(match.blurAmount, 2.5);
-      expect(match.unblurPercentage, 75);
+      expect(match.blurAmount, 3.75);
+      expect(match.unblurPercentage, 50);
       expect(match.showBio, true);
       expect(match.showInterests, true);
       expect(match.showCompatibility, true);
     });
 
     test('should have no blur for episode 4+', () {
-      const match = Match(
+      final match = Match(
         id: '4',
-        createdAt: Duration(seconds: 0) as DateTime,
+        createdAt: now,
         currentEpisode: 4,
+      );
+
+      expect(match.blurAmount, 1.5);
+      expect(match.unblurPercentage, 75);
+    });
+
+    test('should have no blur for episode 5+', () {
+      final match = Match(
+        id: '5',
+        createdAt: now,
+        currentEpisode: 5,
       );
 
       expect(match.blurAmount, 0.0);
@@ -57,9 +70,9 @@ void main() {
     });
 
     test('should identify completed matches', () {
-      const completedMatch = Match(
+      final completedMatch = Match(
         id: 'completed',
-        createdAt: Duration(seconds: 0) as DateTime,
+        createdAt: now,
         status: MatchStatus.completed,
         currentEpisode: 8,
       );
@@ -68,9 +81,9 @@ void main() {
     });
 
     test('should identify active matches', () {
-      const activeMatch = Match(
+      final activeMatch = Match(
         id: 'active',
-        createdAt: Duration(seconds: 0) as DateTime,
+        createdAt: now,
         status: MatchStatus.active,
         currentEpisode: 3,
       );
